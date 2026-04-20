@@ -19,6 +19,7 @@
 /storage/*.key
 /storage/pail
 /vendor
+/app/Console/Commands/mytest.php
 _ide_helper.php
 Homestead.json
 Homestead.yaml
