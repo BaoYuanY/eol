@@ -20,8 +20,8 @@ class StudentTaskModel extends Model
     const int   TASK_PHONE   = 1;
     const int   TASK_MESSAGE = 2;
     const array TASK_MAPPING = [
-        self::TASK_PHONE   => '电话',
-        self::TASK_MESSAGE => '短信'
+        self::TASK_PHONE   => 'DH',
+        self::TASK_MESSAGE => 'DX'
     ];
 
 
