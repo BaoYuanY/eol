@@ -3,17 +3,20 @@
     $students = \App\Models\P\StudentModel::all();
     $tasks = \App\Models\P\StudentTaskModel::with(['student.class'])->orderBy('id', 'desc')->get();
 
-    // 今日统计战报
+    // 今日统计战报（按班级分组）
     $todayStats = \DB::table('p_student as s')
         ->join('p_student_task as t', 's.id', '=', 't.studentId')
+        ->join('p_class as c', 's.classId', '=', 'c.id')
         ->whereDate('t.created_at', now()->today())
         ->selectRaw("
-            s.name,
+            c.name as class_name,
+            s.name as student_name,
             SUM(CASE WHEN t.type = 1 AND t.status = 2 THEN 1 ELSE 0 END) as type1_count,
             SUM(CASE WHEN t.type = 2 AND t.status = 2 THEN 1 ELSE 0 END) as type2_count
         ")
-        ->groupBy('s.id', 's.name')
-        ->get();
+        ->groupBy('c.id', 'c.name', 's.id', 's.name')
+        ->get()
+        ->groupBy('class_name');
 
     $tasks->transform(function($task) {
         $task->type_name = \App\Models\P\StudentTaskModel::TASK_MAPPING[$task->type] ?? '未知';
@@ -92,18 +95,23 @@
 <div class="container-fluid mt-4">
     @if($todayStats->isNotEmpty())
         <div class="alert alert-info border-0 shadow-sm mb-4">
-            <h6 class="alert-heading font-weight-bold mb-2"><i class="fas fa-chart-line mr-2"></i>今日完成情况战报：</h6>
-            <div class="d-flex flex-wrap">
-                @foreach($todayStats as $stat)
-                    <div class="mr-4 mb-1">
-                        <span class="badge badge-light px-2 py-1">
-                            学生 <strong>{{ $stat->name }}</strong> 
-                            任务类型1 - <span class="text-primary">{{ $stat->type1_count }}</span> 
-                            任务类型2 - <span class="text-success">{{ $stat->type2_count }}</span>
-                        </span>
+            <h6 class="alert-heading font-weight-bold mb-3"><i class="fas fa-chart-line mr-2"></i>今日完成情况战报：</h6>
+            @foreach($todayStats as $className => $stats)
+                <div class="mb-3 last-child-mb-0">
+                    <div class="text-muted small font-weight-bold mb-2">{{ $className }}</div>
+                    <div class="d-flex flex-wrap">
+                        @foreach($stats as $stat)
+                            <div class="mr-3 mb-2">
+                                <span class="badge badge-light border px-2 py-1">
+                                    <strong>{{ $stat->student_name }}</strong> 
+                                    H: <span class="text-primary">{{ $stat->type1_count }}</span>
+                                    X: <span class="text-success">{{ $stat->type2_count }}</span>
+                                </span>
+                            </div>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
+                </div>
+            @endforeach
         </div>
     @endif
 
@@ -325,6 +333,9 @@
         '失败': 'danger'
     };
 
+    // 存储所有学生信息供前端联动
+    var allStudents = @json($students);
+
     function formatElapsed(seconds) {
         if (seconds < 60) {
             return seconds + '秒';
@@ -466,6 +477,31 @@
 
         $('#saveTaskBtn').click(function () {
             submitForm('addTaskForm', '/api/addTask');
+        });
+
+        // 班级学生联动逻辑
+        $('#addTaskForm select[name="classId"]').on('change', function() {
+            var classId = $(this).val();
+            var $studentSelect = $('#addTaskForm select[name="studentId"]');
+            
+            $studentSelect.empty();
+            
+            var filteredStudents = allStudents.filter(function(s) {
+                return s.classId == classId;
+            });
+            
+            if (filteredStudents.length > 0) {
+                filteredStudents.forEach(function(s) {
+                    $studentSelect.append('<option value="' + s.id + '">' + s.name + '</option>');
+                });
+            } else {
+                $studentSelect.append('<option value="">该班级暂无学生</option>');
+            }
+        });
+
+        // 模态框打开时触发一次初始化
+        $('#taskModal').on('show.bs.modal', function() {
+            $('#addTaskForm select[name="classId"]').trigger('change');
         });
     });
 
