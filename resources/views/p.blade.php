@@ -1,9 +1,17 @@
 @php
     $classes = \App\Models\P\ClassModel::all();
     $students = \App\Models\P\StudentModel::all();
-    $tasks = \App\Models\P\StudentTaskModel::with(['student.class'])->orderBy('id', 'desc')->get();
+    $tasks = \App\Models\P\StudentTaskModel::with(['student.class'])
+        ->whereIn('status', [\App\Models\P\StudentTaskModel::STATUS_PENDING, \App\Models\P\StudentTaskModel::STATUS_ONGOING])
+        ->orderBy('id', 'desc')
+        ->get();
 
     $tasks->transform(function($task) {
+        try {
+            $task->taskNo = decrypt($task->taskNo);
+        } catch (\Exception $e) {
+            // 如果解密失败（可能是旧数据），保持原样
+        }
         $task->type_name = \App\Models\P\StudentTaskModel::TASK_MAPPING[$task->type] ?? '未知';
         $task->status_name = \App\Models\P\StudentTaskModel::STATUS_MAPPING[$task->status] ?? '未知';
         return $task;
@@ -210,16 +218,16 @@
 
                                 <div class="form-group mb-3">
                                     <label class="small font-weight-bold text-muted mr-3">4. 任务类型</label>
-                                    <div class="btn-group btn-group-sm" id="typeButtonGroup">
-                                        @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
-                                            <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
-                                                {{ $typeName }}
-                                            </button>
-                                        @endforeach
+                                    <div class="d-flex flex-column align-items-start">
+                                        <div class="btn-group btn-group-sm mb-3" id="typeButtonGroup">
+                                            @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
+                                                <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
+                                                    {{ $typeName }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                        <button type="button" class="btn btn-primary btn-sm px-5 font-weight-bold" id="saveTaskBtn">立即发布任务</button>
                                     </div>
-                                </div>
-                                <div class="text-right">
-                                    <button type="button" class="btn btn-primary btn-sm px-5 font-weight-bold" id="saveTaskBtn">立即发布任务</button>
                                 </div>
                             </div>
                         </div>

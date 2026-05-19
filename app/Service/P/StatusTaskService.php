@@ -61,7 +61,7 @@ class StatusTaskService
 
             $res = StudentTaskModel::create([
                 'studentId' => $data['studentId'],
-                'taskNo'    => $taskNo,
+                'taskNo'    => encrypt($taskNo),
                 'type'      => $data['type'] ?? StudentTaskModel::TASK_PHONE,
                 'status'    => StudentTaskModel::STATUS_ONGOING,
                 'title'     => $data['title'] ?? ''
