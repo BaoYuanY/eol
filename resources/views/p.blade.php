@@ -613,9 +613,12 @@
             $('#selectedType').val($(this).data('id'));
         });
 
-        // 回车发布逻辑
-        $('#addTaskForm textarea[name="taskNo"]').on('keydown', function(e) {
+        // 回车发布逻辑 (在整个表单区域内按回车均可触发)
+        $('#addTaskForm').on('keydown', function(e) {
             if (e.keyCode === 13 && !e.shiftKey) {
+                // 如果当前焦点是在按钮上，不重复触发
+                if ($(e.target).is('button')) return;
+                
                 e.preventDefault();
                 $('#saveTaskBtn').trigger('click');
             }
@@ -658,9 +661,10 @@
                 url: '/api/getTodayStats',
                 method: 'GET',
                 success: function(res) {
-                    if (res.code === 200 && Object.keys(res.data).length > 0) {
+                    if (res.code === 200 && res.data && Object.keys(res.data).length > 0) {
                         var html = '';
                         $.each(res.data, function(className, students) {
+                            if (!students || students.length === 0) return;
                             html += '<div class="mb-3 border-bottom pb-2 last-child-border-0">';
                             html += '<div class="text-muted small font-weight-bold mb-2">' + className + '</div>';
                             html += '<div class="d-flex flex-wrap">';
@@ -668,13 +672,18 @@
                                 html += '<div class="mr-3 mb-2">';
                                 html += '<span class="badge badge-light border px-2 py-1">';
                                 html += '<strong>' + stat.student_name + '</strong> ';
-                                html += '类型1: <span class="text-primary">' + stat.type1_count + '</span> ';
-                                html += '类型2: <span class="text-success">' + stat.type2_count + '</span>';
+                                html += 'H: <span class="text-primary">' + stat.type1_count + '</span> ';
+                                html += 'X: <span class="text-success">' + stat.type2_count + '</span>';
                                 html += '</span></div>';
                             });
                             html += '</div></div>';
                         });
-                        $content.html(html);
+                        
+                        if (html === '') {
+                            $content.html('<div class="text-center text-muted py-2">今日暂无完成记录</div>');
+                        } else {
+                            $content.html(html);
+                        }
                     } else {
                         $content.html('<div class="text-center text-muted py-2">今日暂无完成记录</div>');
                     }
