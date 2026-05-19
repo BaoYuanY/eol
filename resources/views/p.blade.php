@@ -66,6 +66,49 @@
             font-size: 0.75rem;
             color: #6c757d;
         }
+
+        /* 选中按钮强化样式 */
+        .btn-selectable {
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-color: #dee2e6;
+            background-color: #fff;
+            color: #495057;
+            transition: all 0.2s;
+        }
+        .btn-selectable:hover {
+            background-color: #f8f9fa;
+        }
+        .btn-selectable.active {
+            background-color: #007bff !important;
+            border-color: #0056b3 !important;
+            color: #fff !important;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(0,123,255,0.5);
+            transform: translateY(-1px);
+        }
+
+        /* 标题红点提示 */
+        .title-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.75rem;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-left: 8px;
+            vertical-align: middle;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
     </style>
 </head>
 <body>
@@ -73,7 +116,10 @@
 
 <nav class="navbar navbar-light bg-white border-bottom">
     <div class="container-fluid px-4">
-        <span class="navbar-brand mb-0 h1">任务中心</span>
+        <span class="navbar-brand mb-0 h1">
+            任务中心
+            <span id="timeoutCountBadge" class="title-badge" style="display: none;">0</span>
+        </span>
     </div>
 </nav>
 
@@ -106,6 +152,12 @@
                 <input type="text" id="searchStudent" class="form-control form-control-sm" placeholder="搜索学生...">
             </div>
             <div class="mr-3 mb-2">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary filter-status-btn active" data-status="all">全部</button>
+                    <button type="button" class="btn btn-outline-secondary filter-status-btn" data-status="进行中">进行中</button>
+                </div>
+            </div>
+            <div class="mr-3 mb-2">
                 <button type="button" class="btn btn-info btn-sm" id="btnShowStats">查看今日战报</button>
             </div>
         </div>
@@ -126,47 +178,48 @@
                 <div class="card-body">
                     <h6 class="card-title font-weight-bold mb-3"><i class="fas fa-plus-circle mr-2 text-primary"></i>快速新增任务</h6>
                     <form id="addTaskForm">
+                        <input type="hidden" name="classId" id="selectedClassId">
+                        <input type="hidden" name="studentId" id="selectedStudentId">
+                        <input type="hidden" name="type" id="selectedType" value="1">
+                        
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
-                                    <label class="small font-weight-bold">任务编号 (每行一个)</label>
-                                    <textarea name="taskNo" class="form-control form-control-sm" rows="4" placeholder="请输入编号..." required></textarea>
+                                    <label class="small font-weight-bold text-muted">1. 任务编号 (每行一个，回车发布)</label>
+                                    <textarea name="taskNo" class="form-control form-control-sm" rows="6" placeholder="请输入编号..." required></textarea>
                                 </div>
                             </div>
-                            <div class="col-md-8">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold">所属班级</label>
-                                            <select name="classId" class="form-control form-control-sm" required>
-                                                <option value="">请选择班级</option>
-                                                @foreach ($classes as $class)
-                                                    <option value="{{ $class['id'] }}">{{ $class['name'] }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold">所属学生</label>
-                                            <select name="studentId" class="form-control form-control-sm" required>
-                                                <option value="">请先选择班级</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold">任务类型</label>
-                                            <select name="type" class="form-control form-control-sm">
-                                                @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
-                                                    <option value="{{ $typeId }}">{{ $typeName }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                            <div class="col-md-9">
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold text-muted">2. 选择班级</label>
+                                    <div class="d-flex flex-wrap" id="classButtonGroup">
+                                        @foreach ($classes as $class)
+                                            <button type="button" class="btn btn-sm btn-selectable class-select-btn" data-id="{{ $class['id'] }}">
+                                                {{ $class['name'] }}
+                                            </button>
+                                        @endforeach
                                     </div>
                                 </div>
-                                <div class="text-right mt-2">
-                                    <button type="button" class="btn btn-primary btn-sm px-4" id="saveTaskBtn">立即发布任务</button>
+                                
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold text-muted">3. 选择学生</label>
+                                    <div class="d-flex flex-wrap" id="studentButtonGroup">
+                                        <div class="text-muted small py-1">请先选择班级</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="form-group mb-0">
+                                        <label class="small font-weight-bold text-muted mr-3">4. 任务类型</label>
+                                        <div class="btn-group btn-group-sm" id="typeButtonGroup">
+                                            @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
+                                                <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
+                                                    {{ $typeName }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-primary btn-sm px-5 font-weight-bold" id="saveTaskBtn">立即发布 (Enter)</button>
                                 </div>
                             </div>
                         </div>
@@ -216,10 +269,15 @@
                                         <span class="badge badge-{{ $statusColors[$task->status_name] ?? 'secondary' }} status-badge">{{ $task->status_name }}</span>
                                     </td>
                                     <td class="text-center">
-                                        @if($task->status_name !== '已完成')
-                                            <button class="btn btn-success btn-sm py-0 px-2 quick-finish-btn" type="button">
-                                                完成
-                                            </button>
+                                        @if($task->status_name !== '已完成' && $task->status_name !== '失败')
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-success py-0 px-2 quick-finish-btn" type="button" data-status="已完成">
+                                                    完成
+                                                </button>
+                                                <button class="btn btn-danger py-0 px-2 quick-finish-btn" type="button" data-status="失败">
+                                                    失败
+                                                </button>
+                                            </div>
                                         @else
                                             <span class="text-muted small">--</span>
                                         @endif
@@ -415,10 +473,46 @@
             }
         });
 
+        // 状态筛选逻辑
+        var currentStatusFilter = 'all';
+        $('.filter-status-btn').on('click', function() {
+            $('.filter-status-btn').removeClass('active');
+            $(this).addClass('active');
+            currentStatusFilter = $(this).data('status');
+            performSearch();
+        });
+
+        // 超时任务统计逻辑 (30分钟)
+        function checkTimeoutTasks() {
+            var timeoutCount = 0;
+            var now = new Date();
+            $('.elapsed-timer').each(function() {
+                var $timer = $(this);
+                var status = $timer.attr('data-status');
+                if (status !== '已完成' && status !== '失败') {
+                    var dateString = $timer.attr('data-start').replace(/-/g, '/');
+                    var start = new Date(dateString);
+                    var diffMinutes = Math.floor((now - start) / (1000 * 60));
+                    if (diffMinutes >= 30) {
+                        timeoutCount++;
+                    }
+                }
+            });
+            
+            var $badge = $('#timeoutCountBadge');
+            if (timeoutCount > 0) {
+                $badge.text(timeoutCount).show();
+            } else {
+                $badge.hide();
+            }
+        }
+        setInterval(checkTimeoutTasks, 10000); // 每10秒检查一次
+        checkTimeoutTasks();
+
         $('.quick-finish-btn').on('click', function () {
             var $row = $(this).closest('tr');
             var taskId = $row.data('task-id');
-            var newStatus = '已完成';
+            var newStatus = $(this).data('status');
 
             $.ajax({
                 url: '/api/updateTaskStatus',
@@ -431,8 +525,8 @@
                     if (res.code === 200) {
                         var $badge = $row.find('.status-badge');
                         $badge.text(newStatus);
-                        $badge.removeClass('badge-secondary badge-primary badge-danger')
-                            .addClass('badge-success');
+                        $badge.removeClass('badge-secondary badge-primary badge-danger badge-success')
+                            .addClass('badge-' + statusColorMap[newStatus]);
 
                         var $timer = $row.find('.elapsed-timer');
                         $timer.attr('data-status', newStatus);
@@ -440,8 +534,8 @@
 
                         $row.find('.text-center').html('<span class="text-muted small">--</span>');
                         
-                        showAlert('任务已完成');
-                        setTimeout(() => window.location.reload(), 500); // 战报需要刷新
+                        showAlert('任务状态已更新');
+                        setTimeout(() => window.location.reload(), 500);
                     } else {
                         showAlert(res.msg || '更新失败', 'danger');
                     }
@@ -459,16 +553,17 @@
 
             $('.task-table tbody tr').each(function() {
                 var $row = $(this);
-                // 跳过“暂无数据”行
                 if ($row.find('td').length <= 1) return;
 
                 var className = $row.find('td:nth-child(2)').text().toLowerCase();
                 var studentName = $row.find('td:nth-child(3)').text().toLowerCase();
+                var status = $row.find('.status-badge').text().trim();
 
                 var classMatch = className.indexOf(classQuery) > -1;
                 var studentMatch = studentName.indexOf(studentQuery) > -1;
+                var statusMatch = (currentStatusFilter === 'all') || (status === currentStatusFilter);
 
-                if (classMatch && studentMatch) {
+                if (classMatch && studentMatch && statusMatch) {
                     $row.show();
                 } else {
                     $row.hide();
@@ -477,6 +572,54 @@
         }
 
         $('#searchClass, #searchStudent').on('keyup', performSearch);
+
+        // 新增任务表单交互逻辑
+        // 班级选择
+        $('.class-select-btn').on('click', function() {
+            $('.class-select-btn').removeClass('active');
+            $(this).addClass('active');
+            var classId = $(this).data('id');
+            $('#selectedClassId').val(classId);
+            
+            // 联动学生
+            var $studentGroup = $('#studentButtonGroup');
+            $studentGroup.empty();
+            $('#selectedStudentId').val(''); // 重置已选学生
+
+            var filteredStudents = allStudents.filter(function(s) {
+                return s.classId == classId;
+            });
+
+            if (filteredStudents.length > 0) {
+                filteredStudents.forEach(function(s) {
+                    $studentGroup.append('<button type="button" class="btn btn-sm btn-selectable student-select-btn" data-id="' + s.id + '">' + s.name + '</button>');
+                });
+            } else {
+                $studentGroup.append('<div class="text-muted small py-1">该班级暂无学生</div>');
+            }
+        });
+
+        // 学生选择 (动态委派)
+        $('#studentButtonGroup').on('click', '.student-select-btn', function() {
+            $('.student-select-btn').removeClass('active');
+            $(this).addClass('active');
+            $('#selectedStudentId').val($(this).data('id'));
+        });
+
+        // 类型选择
+        $('.type-select-btn').on('click', function() {
+            $('.type-select-btn').removeClass('active');
+            $(this).addClass('active');
+            $('#selectedType').val($(this).data('id'));
+        });
+
+        // 回车发布逻辑
+        $('#addTaskForm textarea[name="taskNo"]').on('keydown', function(e) {
+            if (e.keyCode === 13 && !e.shiftKey) {
+                e.preventDefault();
+                $('#saveTaskBtn').trigger('click');
+            }
+        });
 
         $('#saveClassBtn').click(function () {
             submitForm('addClassForm', '/api/addClass');
@@ -487,6 +630,19 @@
         });
 
         $('#saveTaskBtn').click(function () {
+            // 校验表单
+            if (!$('#selectedClassId').val()) {
+                showAlert('请选择班级', 'danger');
+                return;
+            }
+            if (!$('#selectedStudentId').val()) {
+                showAlert('请选择学生', 'danger');
+                return;
+            }
+            if (!$('#addTaskForm textarea[name="taskNo"]').val().trim()) {
+                showAlert('请输入任务编号', 'danger');
+                return;
+            }
             submitForm('addTaskForm', '/api/addTask');
         });
 
