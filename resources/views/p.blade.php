@@ -113,17 +113,67 @@
             <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2 mb-lg-0" data-toggle="modal"
                     data-target="#classModal">添加班级
             </button>
-            <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2 mb-lg-0" data-toggle="modal"
+            <button type="button" class="btn btn-outline-primary btn-sm mb-2 mb-lg-0" data-toggle="modal"
                     data-target="#studentModal">添加学生
-            </button>
-            <button type="button" class="btn btn-primary btn-sm mb-2 mb-lg-0" data-toggle="modal"
-                    data-target="#taskModal">新增任务
             </button>
         </div>
     </div>
 
     <div class="row">
         <div class="col-12">
+            <!-- 内联添加任务表单 -->
+            <div class="card simple-card mb-4">
+                <div class="card-body">
+                    <h6 class="card-title font-weight-bold mb-3"><i class="fas fa-plus-circle mr-2 text-primary"></i>快速新增任务</h6>
+                    <form id="addTaskForm">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="small font-weight-bold">任务编号 (每行一个)</label>
+                                    <textarea name="taskNo" class="form-control form-control-sm" rows="4" placeholder="请输入编号..." required></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="small font-weight-bold">所属班级</label>
+                                            <select name="classId" class="form-control form-control-sm" required>
+                                                <option value="">请选择班级</option>
+                                                @foreach ($classes as $class)
+                                                    <option value="{{ $class['id'] }}">{{ $class['name'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="small font-weight-bold">所属学生</label>
+                                            <select name="studentId" class="form-control form-control-sm" required>
+                                                <option value="">请先选择班级</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="small font-weight-bold">任务类型</label>
+                                            <select name="type" class="form-control form-control-sm">
+                                                @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
+                                                    <option value="{{ $typeId }}">{{ $typeName }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right mt-2">
+                                    <button type="button" class="btn btn-primary btn-sm px-4" id="saveTaskBtn">立即发布任务</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card simple-card table-card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -179,7 +229,7 @@
                                 <tr>
                                     <td colspan="7" class="text-center py-5 text-muted">
                                         <div class="mb-2">暂无任务数据</div>
-                                        <small>点击右上角“新增任务”按钮开始添加</small>
+                                        <small>请在上方输入任务编号并发布</small>
                                     </td>
                                 </tr>
                             @endforelse
@@ -252,59 +302,7 @@
     </div>
 </div>
 
-<!-- 模态框 3：新增任务 -->
-<div class="modal fade" id="taskModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">新增任务</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="addTaskForm">
-            <div class="modal-body">
-                    <div class="form-group">
-                        <label>任务编号 (支持换行输入多个)</label>
-                        <textarea name="taskNo" class="form-control" rows="5" placeholder="请在此输入任务编号，每行一个" required></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label>所属班级</label>
-                            <select name="classId" class="form-control" required>
-                                @foreach ($classes as $class)
-                                    <option value="{{ $class['id'] }}">{{ $class['name'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label>所属学生</label>
-                            <select name="studentId" class="form-control" required>
-                                @foreach ($students as $student)
-                                    <option value="{{ $student['id'] }}">{{ $student['name'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-12">
-                            <label>任务类型</label>
-                            <select name="type" class="form-control">
-                                @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
-                                    <option value="{{ $typeId }}">{{ $typeName }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="saveTaskBtn">保存任务</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+
 
 <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdn.bootcdn.net/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
@@ -538,6 +536,11 @@
             
             $studentSelect.empty();
             
+            if (!classId) {
+                $studentSelect.append('<option value="">请先选择班级</option>');
+                return;
+            }
+            
             var filteredStudents = allStudents.filter(function(s) {
                 return s.classId == classId;
             });
@@ -551,10 +554,8 @@
             }
         });
 
-        // 模态框打开时触发一次初始化
-        $('#taskModal').on('show.bs.modal', function() {
-            $('#addTaskForm select[name="classId"]').trigger('change');
-        });
+        // 初始触发一次
+        $('#addTaskForm select[name="classId"]').trigger('change');
     });
 
     updateElapsedTimers();
