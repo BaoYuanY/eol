@@ -19,14 +19,30 @@ class StatusTaskService
     }
 
     /**
-     * 添加学生
+     * 添加学生（支持批量）
      */
-    public static function addStudent(int $classId, string $name): bool
+    public static function addStudent(int $classId, string $names): bool
     {
-        return StudentModel::create([
-            'classId' => $classId,
-            'name'    => $name
-        ])->exists;
+        $nameList = explode("\n", str_replace("\r", "", $names));
+        $success = true;
+
+        foreach ($nameList as $name) {
+            $name = trim($name);
+            if (empty($name)) {
+                continue;
+            }
+
+            $res = StudentModel::create([
+                'classId' => $classId,
+                'name'    => $name
+            ]);
+
+            if (!$res) {
+                $success = false;
+            }
+        }
+
+        return $success;
     }
 
     /**
@@ -78,5 +94,26 @@ class StatusTaskService
 
         $task->status = $statusId;
         return $task->save();
+    }
+
+    /**
+     * 获取今日战报
+     */
+    public static function getTodayStats(): array
+    {
+        return \DB::table('p_student as s')
+            ->join('p_student_task as t', 's.id', '=', 't.studentId')
+            ->join('p_class as c', 's.classId', '=', 'c.id')
+            ->whereDate('t.created_at', now()->today())
+            ->selectRaw("
+                c.name as class_name,
+                s.name as student_name,
+                SUM(CASE WHEN t.type = 1 AND t.status = 2 THEN 1 ELSE 0 END) as type1_count,
+                SUM(CASE WHEN t.type = 2 AND t.status = 2 THEN 1 ELSE 0 END) as type2_count
+            ")
+            ->groupBy('c.id', 'c.name', 's.id', 's.name')
+            ->get()
+            ->groupBy('class_name')
+            ->toArray();
     }
 }

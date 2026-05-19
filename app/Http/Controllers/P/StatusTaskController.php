@@ -62,4 +62,12 @@ class StatusTaskController extends Controller
 
         return StatusTaskService::updateTaskStatus($taskId, $status) ? $this->success() : $this->error(400, '更新状态失败');
     }
+
+    /**
+     * 获取今日战报
+     */
+    public function getTodayStats(): JsonResponse
+    {
+        return $this->success(StatusTaskService::getTodayStats());
+    }
 }

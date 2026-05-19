@@ -13,3 +13,4 @@ Route::post('addClass', [StatusTaskController::class, 'addClass']);
 Route::post('addStudent', [StatusTaskController::class, 'addStudent']);
 Route::post('addTask', [StatusTaskController::class, 'addTask']);
 Route::post('updateTaskStatus', [StatusTaskController::class, 'updateTaskStatus']);
+Route::get('getTodayStats', [StatusTaskController::class, 'getTodayStats']);

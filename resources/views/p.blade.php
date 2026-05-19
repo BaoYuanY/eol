@@ -3,21 +3,6 @@
     $students = \App\Models\P\StudentModel::all();
     $tasks = \App\Models\P\StudentTaskModel::with(['student.class'])->orderBy('id', 'desc')->get();
 
-    // 今日统计战报（按班级分组）
-    $todayStats = \DB::table('p_student as s')
-        ->join('p_student_task as t', 's.id', '=', 't.studentId')
-        ->join('p_class as c', 's.classId', '=', 'c.id')
-        ->whereDate('t.created_at', now()->today())
-        ->selectRaw("
-            c.name as class_name,
-            s.name as student_name,
-            SUM(CASE WHEN t.type = 1 AND t.status = 2 THEN 1 ELSE 0 END) as type1_count,
-            SUM(CASE WHEN t.type = 2 AND t.status = 2 THEN 1 ELSE 0 END) as type2_count
-        ")
-        ->groupBy('c.id', 'c.name', 's.id', 's.name')
-        ->get()
-        ->groupBy('class_name');
-
     $tasks->transform(function($task) {
         $task->type_name = \App\Models\P\StudentTaskModel::TASK_MAPPING[$task->type] ?? '未知';
         $task->status_name = \App\Models\P\StudentTaskModel::STATUS_MAPPING[$task->status] ?? '未知';
@@ -93,30 +78,36 @@
 </nav>
 
 <div class="container-fluid mt-4">
-    @if($todayStats->isNotEmpty())
-        <div class="alert alert-info border-0 shadow-sm mb-4">
-            <h6 class="alert-heading font-weight-bold mb-3"><i class="fas fa-chart-line mr-2"></i>今日完成情况战报：</h6>
-            @foreach($todayStats as $className => $stats)
-                <div class="mb-3 last-child-mb-0">
-                    <div class="text-muted small font-weight-bold mb-2">{{ $className }}</div>
-                    <div class="d-flex flex-wrap">
-                        @foreach($stats as $stat)
-                            <div class="mr-3 mb-2">
-                                <span class="badge badge-light border px-2 py-1">
-                                    <strong>{{ $stat->student_name }}</strong> 
-                                    H: <span class="text-primary">{{ $stat->type1_count }}</span>
-                                    X: <span class="text-success">{{ $stat->type2_count }}</span>
-                                </span>
-                            </div>
-                        @endforeach
+    <div id="statsSection" class="mb-4" style="display: none;">
+        <div class="alert alert-info border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="alert-heading font-weight-bold mb-0"><i class="fas fa-chart-line mr-2"></i>今日完成情况战报：</h6>
+                <button type="button" class="close" onclick="$('#statsSection').hide()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div id="statsContent">
+                <!-- 统计内容将通过 AJAX 加载 -->
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-info" role="status">
+                        <span class="sr-only">加载中...</span>
                     </div>
                 </div>
-            @endforeach
+            </div>
         </div>
-    @endif
+    </div>
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
-        <div class="mb-3 mb-lg-0">
+        <div class="mb-3 mb-lg-0 d-flex flex-wrap">
+            <div class="mr-3 mb-2">
+                <input type="text" id="searchClass" class="form-control form-control-sm" placeholder="搜索班级...">
+            </div>
+            <div class="mr-3 mb-2">
+                <input type="text" id="searchStudent" class="form-control form-control-sm" placeholder="搜索学生...">
+            </div>
+            <div class="mr-3 mb-2">
+                <button type="button" class="btn btn-info btn-sm" id="btnShowStats">查看今日战报</button>
+            </div>
         </div>
         <div>
             <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2 mb-lg-0" data-toggle="modal"
@@ -175,20 +166,13 @@
                                         <span class="badge badge-{{ $statusColors[$task->status_name] ?? 'secondary' }} status-badge">{{ $task->status_name }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <div class="dropdown">
-                                            <button class="btn btn-light btn-sm dropdown-toggle py-0 px-2" type="button"
-                                                    data-toggle="dropdown" aria-expanded="false">
-                                                修改状态
+                                        @if($task->status_name !== '已完成')
+                                            <button class="btn btn-success btn-sm py-0 px-2 quick-finish-btn" type="button">
+                                                完成
                                             </button>
-                                            <div class="dropdown-menu dropdown-menu-right">
-                                                @foreach($statusColors as $statusName => $color)
-                                                    <button class="dropdown-item change-status-btn" type="button"
-                                                            data-status="{{ $statusName }}">
-                                                        <span class="badge badge-{{ $color }} mr-2"> </span>{{ $statusName }}
-                                                    </button>
-                                                @endforeach
-                                            </div>
-                                        </div>
+                                        @else
+                                            <span class="text-muted small">--</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
@@ -247,8 +231,8 @@
             <form id="addStudentForm">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>学生姓名</label>
-                        <input type="text" name="name" class="form-control" required>
+                        <label>学生姓名 (支持换行输入多个)</label>
+                        <textarea name="name" class="form-control" rows="5" placeholder="请在此输入学生姓名，每行一个" required></textarea>
                     </div>
                     <div class="form-group">
                         <label>所属班级</label>
@@ -433,10 +417,10 @@
             }
         });
 
-        $('.change-status-btn').on('click', function () {
-            var newStatus = $(this).data('status');
+        $('.quick-finish-btn').on('click', function () {
             var $row = $(this).closest('tr');
             var taskId = $row.data('task-id');
+            var newStatus = '已完成';
 
             $.ajax({
                 url: '/api/updateTaskStatus',
@@ -449,14 +433,17 @@
                     if (res.code === 200) {
                         var $badge = $row.find('.status-badge');
                         $badge.text(newStatus);
-                        $badge.removeClass('badge-secondary badge-primary badge-success')
-                            .addClass('badge-' + statusColorMap[newStatus]);
+                        $badge.removeClass('badge-secondary badge-primary badge-danger')
+                            .addClass('badge-success');
 
                         var $timer = $row.find('.elapsed-timer');
                         $timer.attr('data-status', newStatus);
+                        $timer.hide();
 
-                        updateElapsedTimers();
-                        showAlert('状态更新成功');
+                        $row.find('.text-center').html('<span class="text-muted small">--</span>');
+                        
+                        showAlert('任务已完成');
+                        setTimeout(() => window.location.reload(), 500); // 战报需要刷新
                     } else {
                         showAlert(res.msg || '更新失败', 'danger');
                     }
@@ -466,6 +453,32 @@
                 }
             });
         });
+
+        // 搜索功能逻辑
+        function performSearch() {
+            var classQuery = $('#searchClass').val().toLowerCase();
+            var studentQuery = $('#searchStudent').val().toLowerCase();
+
+            $('.task-table tbody tr').each(function() {
+                var $row = $(this);
+                // 跳过“暂无数据”行
+                if ($row.find('td').length <= 1) return;
+
+                var className = $row.find('td:nth-child(2)').text().toLowerCase();
+                var studentName = $row.find('td:nth-child(3)').text().toLowerCase();
+
+                var classMatch = className.indexOf(classQuery) > -1;
+                var studentMatch = studentName.indexOf(studentQuery) > -1;
+
+                if (classMatch && studentMatch) {
+                    $row.show();
+                } else {
+                    $row.hide();
+                }
+            });
+        }
+
+        $('#searchClass, #searchStudent').on('keyup', performSearch);
 
         $('#saveClassBtn').click(function () {
             submitForm('addClassForm', '/api/addClass');
@@ -477,6 +490,45 @@
 
         $('#saveTaskBtn').click(function () {
             submitForm('addTaskForm', '/api/addTask');
+        });
+
+        // 加载战报逻辑
+        $('#btnShowStats').click(function() {
+            var $section = $('#statsSection');
+            var $content = $('#statsContent');
+            
+            $section.show();
+            $content.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-info" role="status"></div></div>');
+
+            $.ajax({
+                url: '/api/getTodayStats',
+                method: 'GET',
+                success: function(res) {
+                    if (res.code === 200 && Object.keys(res.data).length > 0) {
+                        var html = '';
+                        $.each(res.data, function(className, students) {
+                            html += '<div class="mb-3 border-bottom pb-2 last-child-border-0">';
+                            html += '<div class="text-muted small font-weight-bold mb-2">' + className + '</div>';
+                            html += '<div class="d-flex flex-wrap">';
+                            $.each(students, function(idx, stat) {
+                                html += '<div class="mr-3 mb-2">';
+                                html += '<span class="badge badge-light border px-2 py-1">';
+                                html += '<strong>' + stat.student_name + '</strong> ';
+                                html += '类型1: <span class="text-primary">' + stat.type1_count + '</span> ';
+                                html += '类型2: <span class="text-success">' + stat.type2_count + '</span>';
+                                html += '</span></div>';
+                            });
+                            html += '</div></div>';
+                        });
+                        $content.html(html);
+                    } else {
+                        $content.html('<div class="text-center text-muted py-2">今日暂无完成记录</div>');
+                    }
+                },
+                error: function() {
+                    $content.html('<div class="text-center text-danger py-2">加载失败，请重试</div>');
+                }
+            });
         });
 
         // 班级学生联动逻辑
