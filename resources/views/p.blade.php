@@ -208,18 +208,18 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="form-group mb-0">
-                                        <label class="small font-weight-bold text-muted mr-3">4. 任务类型</label>
-                                        <div class="btn-group btn-group-sm" id="typeButtonGroup">
-                                            @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
-                                                <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
-                                                    {{ $typeName }}
-                                                </button>
-                                            @endforeach
-                                        </div>
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold text-muted mr-3">4. 任务类型</label>
+                                    <div class="btn-group btn-group-sm" id="typeButtonGroup">
+                                        @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
+                                            <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
+                                                {{ $typeName }}
+                                            </button>
+                                        @endforeach
                                     </div>
-                                    <button type="button" class="btn btn-primary btn-sm px-5 font-weight-bold" id="saveTaskBtn">立即发布 (Enter)</button>
+                                </div>
+                                <div class="text-right">
+                                    <button type="button" class="btn btn-primary btn-sm px-5 font-weight-bold" id="saveTaskBtn">立即发布任务</button>
                                 </div>
                             </div>
                         </div>
@@ -611,17 +611,6 @@
             $('.type-select-btn').removeClass('active');
             $(this).addClass('active');
             $('#selectedType').val($(this).data('id'));
-        });
-
-        // 回车发布逻辑 (在整个表单区域内按回车均可触发)
-        $('#addTaskForm').on('keydown', function(e) {
-            if (e.keyCode === 13 && !e.shiftKey) {
-                // 如果当前焦点是在按钮上，不重复触发
-                if ($(e.target).is('button')) return;
-                
-                e.preventDefault();
-                $('#saveTaskBtn').trigger('click');
-            }
         });
 
         $('#saveClassBtn').click(function () {
