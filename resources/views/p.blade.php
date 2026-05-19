@@ -3,6 +3,7 @@
     $students = \App\Models\P\StudentModel::all();
     $tasks = \App\Models\P\StudentTaskModel::with(['student.class'])
         ->whereIn('status', [\App\Models\P\StudentTaskModel::STATUS_PENDING, \App\Models\P\StudentTaskModel::STATUS_ONGOING])
+        ->whereDate('created_at', now()->today())
         ->orderBy('id', 'desc')
         ->get();
 
