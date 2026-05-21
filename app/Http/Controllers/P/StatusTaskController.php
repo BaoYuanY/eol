@@ -39,9 +39,9 @@ class StatusTaskController extends Controller
      */
     public function addTask(Request $request): JsonResponse
     {
-        $data = $request->only(['studentId', 'taskNo', 'type']);
+        $data = $request->only(['studentId', 'taskNo', 'types']);
 
-        if (empty($data['studentId']) || empty($data['taskNo'])) {
+        if (empty($data['studentId']) || empty($data['taskNo']) || empty($data['types'])) {
             return $this->error(400, '参数错误');
         }
 

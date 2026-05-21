@@ -46,11 +46,12 @@ class StatusTaskService
     }
 
     /**
-     * 添加任务（支持批量）
+     * 添加任务（支持批量和多类型）
      */
     public static function addTask(array $data): bool
     {
         $taskNos = explode("\n", str_replace("\r", "", $data['taskNo']));
+        $types = explode(",", $data['types'] ?? '');
         $success = true;
 
         foreach ($taskNos as $taskNo) {
@@ -59,16 +60,23 @@ class StatusTaskService
                 continue;
             }
 
-            $res = StudentTaskModel::create([
-                'studentId' => $data['studentId'],
-                'taskNo'    => encrypt($taskNo),
-                'type'      => $data['type'] ?? StudentTaskModel::TASK_PHONE,
-                'status'    => StudentTaskModel::STATUS_ONGOING,
-                'title'     => $data['title'] ?? ''
-            ]);
+            foreach ($types as $type) {
+                $type = trim($type);
+                if (empty($type)) {
+                    continue;
+                }
 
-            if (!$res) {
-                $success = false;
+                $res = StudentTaskModel::create([
+                    'studentId' => $data['studentId'],
+                    'taskNo'    => encrypt($taskNo),
+                    'type'      => $type,
+                    'status'    => StudentTaskModel::STATUS_ONGOING,
+                    'title'     => $data['title'] ?? ''
+                ]);
+
+                if (!$res) {
+                    $success = false;
+                }
             }
         }
 

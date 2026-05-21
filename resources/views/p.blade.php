@@ -189,7 +189,7 @@
                     <form id="addTaskForm">
                         <input type="hidden" name="classId" id="selectedClassId">
                         <input type="hidden" name="studentId" id="selectedStudentId">
-                        <input type="hidden" name="type" id="selectedType" value="1">
+                        <input type="hidden" name="types" id="selectedTypes" value="">
                         
                         <div class="row">
                             <div class="col-md-3">
@@ -222,7 +222,7 @@
                                     <div class="d-flex flex-column align-items-start">
                                         <div class="btn-group btn-group-sm mb-3" id="typeButtonGroup">
                                             @foreach(\App\Models\P\StudentTaskModel::TASK_MAPPING as $typeId => $typeName)
-                                                <button type="button" class="btn btn-selectable type-select-btn {{ $typeId == 1 ? 'active' : '' }}" data-id="{{ $typeId }}">
+                                                <button type="button" class="btn btn-selectable type-select-btn" data-id="{{ $typeId }}">
                                                     {{ $typeName }}
                                                 </button>
                                             @endforeach
@@ -615,11 +615,16 @@
             $('#selectedStudentId').val($(this).data('id'));
         });
 
-        // 类型选择
+        // 类型选择 (支持多选)
         $('.type-select-btn').on('click', function() {
-            $('.type-select-btn').removeClass('active');
-            $(this).addClass('active');
-            $('#selectedType').val($(this).data('id'));
+            $(this).toggleClass('active');
+            
+            var selectedTypes = [];
+            $('.type-select-btn.active').each(function() {
+                selectedTypes.push($(this).data('id'));
+            });
+            
+            $('#selectedTypes').val(selectedTypes.join(','));
         });
 
         $('#saveClassBtn').click(function () {
@@ -638,6 +643,10 @@
             }
             if (!$('#selectedStudentId').val()) {
                 showAlert('请选择学生', 'danger');
+                return;
+            }
+            if (!$('#selectedTypes').val()) {
+                showAlert('请选择至少一个任务类型', 'danger');
                 return;
             }
             if (!$('#addTaskForm textarea[name="taskNo"]').val().trim()) {
